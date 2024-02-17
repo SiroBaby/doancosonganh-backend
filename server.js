@@ -8,11 +8,11 @@ app.use(express.json());
 app.use(cors());
 
 const db = mysql.createConnection({
-  host: 'localhost',
+  host: '192.168.1.2',
   user: 'root',
-  password: '',
-  database: 'pressurestore2',
-  port: 3307,
+  password: '12345678',
+  database: 'taochoichoi',
+  port: 3306,
 });
 
 db.connect((err) => {
