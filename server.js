@@ -8,6 +8,7 @@ const path = require('path');
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.static('public'))
 
 //Khai báo thông tin đăng nhập mysql
 const db = mysql.createConnection({
@@ -29,10 +30,10 @@ db.connect((err) => {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'images/');
+    cb(null, 'public/images');
   },
   filename: function (req, file, cb) {
-    cb(null, file.originalname);
+    cb(null, file.fieldname + "_" + Date.now() + path.extname(file.originalname));
   },
 });
 
@@ -40,8 +41,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.post('/upload', upload.single('image'), (req, res) => {
+  console.log(req.file);
   if (req.file) {
-    const imagePath = path.join(__dirname, 'images', req.file.originalname);
+    const imagePath = req.file.filename;
     res.json({ message: 'File uploaded successfully', imagePath: imagePath });
   } else {
     res.status(400).json({ error: 'No file uploaded' });
@@ -64,7 +66,6 @@ app.post('/adding', (req, res) => {
     Hinh_anh,
     Ma_loai,
   } = req.body;
-  
   const sql = "INSERT INTO san_pham (`Ma_SP`, `Gia_BD`, `Phan_tram_giam`, `Gia_ban`, `So_luong`, `Trong_luong`, `Kich_thuoc`, `Hinh_dang`, `Mau_sac`, `Do_tinh_khiet`, `Hinh_anh`, `Ma_loai`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   const values = [
@@ -115,6 +116,15 @@ app.post('/login', (req, res) => {
 
   });
 });
+
+// lấy danh sách toàn bộ sản phẩm
+app.get('/getproducts', (req, res) => {
+    const sql = 'SELECT * FROM san_pham;';
+    db.query(sql, (err, result) => {
+      if (err) return res.json(err);
+      return res.json(result);
+    });
+  });
 
 // app.post('/checkout', (req, res) => {
 //   const { ten_sanpham, gia_ban, soluong, thanhtien } = req.body;
