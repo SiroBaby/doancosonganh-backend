@@ -126,6 +126,14 @@ app.get('/getproducts', (req, res) => {
     });
   });
 
+app.get('/getuser', (req, res) => {
+  const sql = 'SELECT * FROM User';
+  db.query(sql, (err, result) => {
+    if (err) return res.json(err);
+    return res.json(result);
+  })
+})
+
 // app.post('/checkout', (req, res) => {
 //   const { ten_sanpham, gia_ban, soluong, thanhtien } = req.body;
 //   const sql = 'INSERT INTO sanpham (ten_sanpham, gia_ban, soluong, thanhtien) VALUES (?, ?, ?, ?)';
