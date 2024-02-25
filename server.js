@@ -244,6 +244,24 @@ app.post('/updatepicture/:id', async (req, res) => {
   });
 })
 
+// Api xóa sản phẩm
+// Api xóa sản phẩm
+app.delete('/deleteproducts/:id', async (req, res) => {
+  const productId = req.params.id; // Sửa thành req.params.id
+  const sql = `DELETE FROM san_pham WHERE Ma_SP = ?`
+  console.log('Executing SQL query:', sql);
+  db.query(sql, productId, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+    res.send(data);
+    res.status(200).json({ message: 'Delete product successfully' }); // Sửa thành 'Delete product successfully'
+  });
+})
+
+
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
   console.error(err.stack);
