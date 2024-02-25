@@ -96,7 +96,7 @@ app.post('/adding', (req, res) => {
   });
 })
 
-//api sửa sản phẩm
+//api lấy dữ liệu sản phẩm đang được sửa
 app.get('/editproducts/:id', (req, res) => {
   const productId = req.params.id;
   console.log('Handling request for product with ID:', productId);
@@ -219,7 +219,30 @@ app.post('/updateproduct/:id', async (req, res) => {
   }
 });
 
-// ... (các API khác và cấu hình khác)
+// api sửa hình ảnh sản phẩm
+app.post('/updatepicture/:id', async (req, res) => {
+  const productId = req.params.id;
+  const {
+    Hinh_anh
+  } = req.body;
+  const sql = `
+  UPDATE san_pham 
+  SET Hinh_anh = ? 
+  WHERE Ma_SP = ?;
+`;
+  const value = [Hinh_anh, productId];
+  console.log('Executing SQL query:', sql);
+  console.log('Query values:', value);
+  db.query(sql, value, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+
+    res.status(200).json({ message: 'Picture edit successfully' });
+  });
+})
 
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
