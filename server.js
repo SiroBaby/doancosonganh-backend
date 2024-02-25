@@ -15,7 +15,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore2',
+  database: 'pressurestore',
   port: 3307,
 });
 
@@ -96,6 +96,29 @@ app.post('/adding', (req, res) => {
   });
 })
 
+//api sửa sản phẩm
+app.get('/editproducts/:id', (req, res) => {
+  const productId = req.params.id;
+  console.log('Handling request for product with ID:', productId);
+  const sql = 'SELECT * FROM san_pham WHERE Ma_SP = ?';
+
+  db.query(sql, [productId], (err, result) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+
+    if (result.length === 0) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    res.status(200).json(result[0]); // Trả về thông tin sản phẩm cụ thể
+  });
+});
+
+
 //api login
 app.post('/login', (req, res) => {
   const sql = "SELECT * FROM user WHERE Phone = ? AND Password = ?";
@@ -117,7 +140,7 @@ app.post('/login', (req, res) => {
   });
 });
 
-// lấy danh sách toàn bộ sản phẩm
+//api lấy danh sách toàn bộ sản phẩm
 app.get('/getproducts', (req, res) => {
     const sql = 'SELECT * FROM san_pham;';
     db.query(sql, (err, result) => {
@@ -126,6 +149,7 @@ app.get('/getproducts', (req, res) => {
     });
   });
 
+//api lấy danh sách toàn bộ người dùng
 app.get('/getuser', (req, res) => {
   const sql = 'SELECT * FROM User';
   db.query(sql, (err, result) => {
@@ -133,6 +157,75 @@ app.get('/getuser', (req, res) => {
     return res.json(result);
   })
 })
+
+//api update sản phẩm
+app.post('/updateproduct/:id', async (req, res) => {
+  const productId = req.params.id;
+  const {
+    Ma_SP,
+    Gia_BD,
+    Phan_tram_giam,
+    Gia_ban,
+    So_luong,
+    Trong_luong,
+    Kich_thuoc,
+    Hinh_dang,
+    Mau_sac,
+    Do_tinh_khiet,
+    Ma_loai,
+  } = req.body;
+
+  // Xử lý cập nhật sản phẩm
+  try {
+    const sql = `
+      UPDATE san_pham 
+      SET 
+        Ma_SP = ?, 
+        Gia_BD = ?, 
+        Phan_tram_giam = ?, 
+        Gia_ban = ?, 
+        So_luong = ?, 
+        Trong_luong = ?, 
+        Kich_thuoc = ?, 
+        Hinh_dang = ?, 
+        Mau_sac = ?, 
+        Do_tinh_khiet = ?, 
+        Ma_loai = ? 
+      WHERE 
+        Ma_SP = ?;
+    `;
+
+    // Nếu có hình ảnh mới, thêm giá trị Hinh_anh vào mảng values
+    const values = [
+      Ma_SP,
+      Gia_BD,
+      Phan_tram_giam,
+      Gia_ban,
+      So_luong,
+      Trong_luong,
+      Kich_thuoc,
+      Hinh_dang,
+      Mau_sac,
+      Do_tinh_khiet,
+      Ma_loai,
+      productId,
+    ];
+
+    await db.query(sql, values);
+    res.status(200).json({ message: 'Product updated successfully' });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ... (các API khác và cấu hình khác)
+
+// Bổ sung middleware xử lý lỗi không nằm trong route
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // app.post('/checkout', (req, res) => {
 //   const { ten_sanpham, gia_ban, soluong, thanhtien } = req.body;
