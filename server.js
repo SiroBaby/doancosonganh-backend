@@ -306,7 +306,7 @@ app.post('/updatepicture/:id', async (req, res) => {
 
 // Api xóa sản phẩm
 app.delete('/deleteproducts/:id', async (req, res) => {
-  const productId = req.params.id; // Sửa thành req.params.id
+  const productId = req.params.id;
   const sql = `DELETE FROM san_pham WHERE Ma_SP = ?`
   console.log('Executing SQL query:', sql);
   db.query(sql, productId, (err, data) => {
@@ -315,7 +315,7 @@ app.delete('/deleteproducts/:id', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
-    res.status(200).json({ message: 'Delete product successfully' }); // Sửa thành 'Delete product successfully'
+    res.status(200).json({ message: 'Delete product successfully' });
   });
 })
 
@@ -324,19 +324,6 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
 });
-
-// app.post('/checkout', (req, res) => {
-//   const { ten_sanpham, gia_ban, soluong, thanhtien } = req.body;
-//   const sql = 'INSERT INTO sanpham (ten_sanpham, gia_ban, soluong, thanhtien) VALUES (?, ?, ?, ?)';
-//   db.query(sql, [ten_sanpham, gia_ban, soluong, thanhtien], (err, result) => {
-//     if (err) {
-//       console.error('Error executing query: ' + err.stack);
-//       res.status(500).send('Internal Server Error');
-//       return;
-//     }
-//     res.status(200).send('Payment successful');
-//   });
-// });
 
 //<--------------------------------------Test đổ dữ liệu từ dtb vào----------------------->
 
