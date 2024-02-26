@@ -255,7 +255,6 @@ app.post('/updateproduct/:id', async (req, res) => {
         Ma_SP = ?;
     `;
 
-    // Nếu có hình ảnh mới, thêm giá trị Hinh_anh vào mảng values
     const values = [
       Ma_SP,
       Gia_BD,
