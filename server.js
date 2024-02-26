@@ -158,6 +158,66 @@ app.get('/getuser', (req, res) => {
   })
 })
 
+//api lấy thông tin người dùng nhất định
+app.get('/getuser/:id', (req, res) => {
+  const id = req.params.id;
+  const sql = 'SELECT * FROM User WHERE Phone = ?';
+  console.log('Excuting SQL query: ', sql);
+  console.log('Value: ', id);
+  db.query(sql, id, (err, result) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+
+    if (result.length === 0) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    res.status(200).json(result[0]); // Trả về thông tin sản phẩm cụ thể
+  });
+})
+
+//api sửa thông tin người dùng
+app.put('/edituser/:id', async(req, res) => {
+  const userId = req.params.id;
+  const {
+    Phone,
+    Username,
+    Password,
+    Email
+  } = req.body;
+  const sql = `UPDATE User SET Phone = ?, Username = ?, Password = ?, Email = ? WHERE Phone = ? `;
+  const value = [Phone, Username, Password, Email, userId];
+  console.log('Executing SQL query: ', sql);
+  console.log('Values: ', value);
+  db.query(sql, value, (err,data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({error: 'Internal Server Error'});
+      return;
+    }
+    res.status(200).json({message: 'Edit user successfully'});
+  })
+})
+
+// Api xóa người dùng
+app.delete('/deleteuser/:id', async (req, res) => {
+  const userId = req.params.id; // Sửa thành req.params.id
+  const sql = `DELETE FROM User WHERE Phone = ?`
+  console.log('Executing SQL query:', sql);
+  db.query(sql, userId, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+    res.status(200).json({ message: 'Delete user successfully' }); // Sửa thành 'Delete product successfully'
+  });
+})
+
 //api update sản phẩm
 app.post('/updateproduct/:id', async (req, res) => {
   const productId = req.params.id;
@@ -245,7 +305,6 @@ app.post('/updatepicture/:id', async (req, res) => {
 })
 
 // Api xóa sản phẩm
-// Api xóa sản phẩm
 app.delete('/deleteproducts/:id', async (req, res) => {
   const productId = req.params.id; // Sửa thành req.params.id
   const sql = `DELETE FROM san_pham WHERE Ma_SP = ?`
@@ -259,7 +318,6 @@ app.delete('/deleteproducts/:id', async (req, res) => {
     res.status(200).json({ message: 'Delete product successfully' }); // Sửa thành 'Delete product successfully'
   });
 })
-
 
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
