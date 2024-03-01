@@ -15,8 +15,8 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore',
-  port: 3307,
+  database: 'pressure store',
+  port: 3306,
 });
 
 //kết nối với mysql
@@ -27,6 +27,8 @@ db.connect((err) => {
   }
   console.log('Connected to MySQL database');
 });
+
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -96,6 +98,40 @@ app.post('/adding', (req, res) => {
   });
 })
 
+app.get("/product/:id", (req, res) => {
+  const maSP = req.params.id;
+  console.log(maSP);
+  // Thực hiện truy vấn để lấy thông tin chi tiết sản phẩm từ cơ sở dữ liệu
+  // const sql = "SELECT * FROM san_pham WHERE Ma_SP = ?";
+  const sql = `
+  SELECT san_pham.*, danh_muc_san_pham.Ten_Loai
+  FROM san_pham
+  JOIN danh_muc_san_pham ON san_pham.Ma_Loai = danh_muc_san_pham.Ma_Loai
+  WHERE san_pham.Ma_SP = ?;
+`;
+
+  db.query(sql, [maSP], (err, results) => {
+    if (err) {
+      console.error("Error executing query: " + err.stack);
+      res.status(500).json({ error: "Internal Server Error" });
+      return;
+    }
+
+    // Kiểm tra nếu sản phẩm không tồn tại
+    if (results.length === 0) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+
+    // Trả về thông tin chi tiết sản phẩm
+    const productDetail = results[0];
+
+    const imagePath = `http://localhost:3308/public/images/${productDetail.Hinh_Anh}`;
+    productDetail.ImagePath = imagePath;
+    res.status(200).json(productDetail);
+  });
+});
+
 //api lấy dữ liệu sản phẩm đang được sửa
 app.get('/editproducts/:id', (req, res) => {
   const productId = req.params.id;
@@ -124,13 +160,13 @@ app.post('/login', (req, res) => {
   const sql = "SELECT * FROM user WHERE Phone = ? AND Password = ?";
 
   db.query(sql, [req.body.phone, req.body.password], (err, result) => {
-     
+
     if (result.length > 0) {
       res.status(200).json({ message: 'Login successful' });
     } else {
       res.status(401).json({ message: 'Login failed' });
     }
-    
+
     if (err) {
       console.error('Error executing query: ' + err.stack);
       res.status(500).json({ error: 'Internal Server Error' });
@@ -142,12 +178,12 @@ app.post('/login', (req, res) => {
 
 //api lấy danh sách toàn bộ sản phẩm
 app.get('/getproducts', (req, res) => {
-    const sql = 'SELECT * FROM san_pham;';
-    db.query(sql, (err, result) => {
-      if (err) return res.json(err);
-      return res.json(result);
-    });
+  const sql = 'SELECT * FROM san_pham;';
+  db.query(sql, (err, result) => {
+    if (err) return res.json(err);
+    return res.json(result);
   });
+});
 
 //api lấy danh sách toàn bộ người dùng
 app.get('/getuser', (req, res) => {
@@ -181,7 +217,7 @@ app.get('/getuser/:id', (req, res) => {
 })
 
 //api sửa thông tin người dùng
-app.put('/edituser/:id', async(req, res) => {
+app.put('/edituser/:id', async (req, res) => {
   const userId = req.params.id;
   const {
     Phone,
@@ -193,13 +229,13 @@ app.put('/edituser/:id', async(req, res) => {
   const value = [Phone, Username, Password, Email, userId];
   console.log('Executing SQL query: ', sql);
   console.log('Values: ', value);
-  db.query(sql, value, (err,data) => {
+  db.query(sql, value, (err, data) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
-      res.status(500).json({error: 'Internal Server Error'});
+      res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
-    res.status(200).json({message: 'Edit user successfully'});
+    res.status(200).json({ message: 'Edit user successfully' });
   })
 })
 
@@ -335,7 +371,7 @@ app.use((err, req, res, next) => {
 //   });
 
 //<--------------------------------------Test đổ dữ liệu từ dtb vào----------------------->
-  
+
 //Kiểm tra kết nối với mysql
 const PORT = process.env.PORT || 3308;
 app.listen(PORT, () => {
