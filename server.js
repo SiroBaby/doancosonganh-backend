@@ -15,8 +15,8 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore',
-  port: 3307,
+  database: 'pressure_store',
+  port: 3306,
 });
 
 //kết nối với mysql
