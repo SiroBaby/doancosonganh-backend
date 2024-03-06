@@ -354,6 +354,25 @@ app.delete('/deleteproducts/:id', async (req, res) => {
   });
 })
 
+// Lấy toàn bộ danh sách trong bảng gio_hang dựa vào sđt user
+app.get('/getcart', async (req, res) => {
+  const Phone = '0123456789'
+  const sql = 'SELECT san_pham.Hinh_anh, san_pham.Ma_SP, san_pham.Gia_ban, User.Phone FROM user JOIN gio_hang ON user.Phone = gio_hang.Phone JOIN san_pham ON gio_hang.Ma_SP = san_pham.Ma_SP WHERE User.Phone = ?'
+  console.log('Executing SQL query:', sql);
+  db.query(sql, Phone, (err, data) => {
+    if (err) {
+      console.error('Error excuting query:' + err.stack);
+      res.status(500).json({error: 'Internal Server Error'});
+      return;
+    }
+    if (data.length === 0) {
+      res.status(404).json({error: 'Product not found'});
+      return;
+    }
+    res.status(200).json(data);
+  })
+})
+
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
   console.error(err.stack);
