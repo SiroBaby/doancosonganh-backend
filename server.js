@@ -15,7 +15,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressure_store',
+  database: 'pressurestore',
   port: 3307,
 });
 
@@ -342,17 +342,50 @@ app.post('/updatepicture/:id', async (req, res) => {
 // Api xóa sản phẩm
 app.delete('/deleteproducts/:id', async (req, res) => {
   const productId = req.params.id;
-  const sql = `DELETE FROM san_pham WHERE Ma_SP = ?`
-  console.log('Executing SQL query:', sql);
-  db.query(sql, productId, (err, data) => {
-    if (err) {
-      console.error('Error executing query: ' + err.stack);
+
+  // Kiểm tra xem có dữ liệu trong bảng gio_hang tham chiếu đến sản phẩm không
+  const checkQuery = 'SELECT COUNT(*) AS count FROM gio_hang WHERE Ma_SP = ?';
+  db.query(checkQuery, productId, (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error('Error checking related data: ' + checkErr.stack);
       res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
-    res.status(200).json({ message: 'Delete product successfully' });
+
+    const rowCount = checkResult[0].count;
+
+    // Nếu có dữ liệu liên quan trong bảng gio_hang, thực hiện xóa trước
+    if (rowCount > 0) {
+      const deleteQuery = 'DELETE FROM gio_hang WHERE Ma_SP = ?';
+      db.query(deleteQuery, productId, (deleteErr, deleteResult) => {
+        if (deleteErr) {
+          console.error('Error deleting related data: ' + deleteErr.stack);
+          res.status(500).json({ error: 'Internal Server Error' });
+          return;
+        }
+
+        // Sau khi xóa dữ liệu trong gio_hang, thực hiện xóa sản phẩm
+        executeDeleteProductQuery();
+      });
+    } else {
+      // Nếu không có dữ liệu liên quan trong gio_hang, thực hiện xóa sản phẩm trực tiếp
+      executeDeleteProductQuery();
+    }
   });
-})
+
+  function executeDeleteProductQuery() {
+    const deleteProductQuery = 'DELETE FROM san_pham WHERE Ma_SP = ?';
+    db.query(deleteProductQuery, productId, (err, data) => {
+      if (err) {
+        console.error('Error executing query: ' + err.stack);
+        res.status(500).json({ error: 'Internal Server Error' });
+        return;
+      }
+      res.status(200).json({ message: 'Delete product successfully' });
+    });
+  }
+});
+
 
 // Lấy toàn bộ danh sách trong bảng gio_hang dựa vào sđt user
 app.get('/getcart', async (req, res) => {
