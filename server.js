@@ -388,10 +388,11 @@ app.delete('/deleteproducts/:id', async (req, res) => {
 
 
 // Lấy toàn bộ danh sách trong bảng gio_hang dựa vào sđt user
-app.get('/getcart', async (req, res) => {
-  const Phone = '0123456789'
-  const sql = 'SELECT san_pham.Hinh_anh, san_pham.Ma_SP, san_pham.Gia_ban, User.Phone FROM user JOIN gio_hang ON user.Phone = gio_hang.Phone JOIN san_pham ON gio_hang.Ma_SP = san_pham.Ma_SP WHERE User.Phone = ?'
+app.get('/getcart/:phone', async (req, res) => {
+  const Phone = req.params.phone;
+  const sql = 'SELECT san_pham.Hinh_anh, san_pham.Ma_SP, san_pham.Gia_ban, gio_hang.So_luong, gio_hang.Tong_tien, User.Phone FROM user JOIN gio_hang ON user.Phone = gio_hang.Phone JOIN san_pham ON gio_hang.Ma_SP = san_pham.Ma_SP WHERE User.Phone = ?'
   console.log('Executing SQL query:', sql);
+  console.log('Executing Phone:', Phone);
   db.query(sql, Phone, (err, data) => {
     if (err) {
       console.error('Error excuting query:' + err.stack);
@@ -405,6 +406,98 @@ app.get('/getcart', async (req, res) => {
     res.status(200).json(data);
   })
 })
+
+//api thêm sản phẩm vào giỏ hàng
+app.post('/addtocart/:id', async (req, res) => {
+  const ID = req.params.id;
+  const {
+    Phone,
+    Ma_SP,
+    So_luong,
+    Gia_SP,
+  } = req.body;
+  const checkQuery = 'SELECT * FROM gio_hang WHERE Phone = ? AND Ma_SP = ?';
+  db.query(checkQuery, [Phone, Ma_SP], async (checkErr, checkResult) => {
+    if (checkErr) {
+      console.error('Error checking existing product in cart:', checkErr);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+    if (checkResult.length > 0) {
+      // Tăng số lượng sản phẩm lên 1
+      const updateQuery = 'UPDATE gio_hang SET So_luong = So_luong + 1, Tong_tien = So_luong * Gia_SP WHERE Phone = ? AND Ma_SP = ?';
+      db.query(updateQuery, [Phone, Ma_SP], async (updateErr, updateResult) => {
+        if (updateErr) {
+          console.error('Error updating quantity of existing product in cart:', updateErr);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        return res.status(200).json({ message: 'Product quantity updated successfully in cart' });
+      });
+    } else {
+      // Nếu sản phẩm chưa tồn tại trong giỏ hàng, thực hiện thêm sản phẩm vào giỏ hàng
+      const insertQuery = 'INSERT INTO gio_hang (Phone, Ma_SP, So_luong, Gia_SP, Tong_tien) VALUES (?, ?, ?, ?, ?)';
+      const tongTien = So_luong * Gia_SP;
+      db.query(insertQuery, [Phone, Ma_SP, So_luong, Gia_SP, tongTien], async (insertErr, insertResult) => {
+        if (insertErr) {
+          console.error('Error adding product to cart:', insertErr);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
+        return res.status(200).json({ message: 'Product added successfully to cart' });
+      });
+    }
+  });
+})
+
+//api cập nhật số lượng và giá sản phẩm
+app.post('/updatecart/:phone', async (req, res) => {
+  const phone = req.params.phone;
+  const updatedProducts = req.body.products;
+
+  // Tạo mảng chứa các truy vấn cập nhật sản phẩm
+  const updatePromises = updatedProducts.map(product => {
+    const { Ma_SP, So_luong, Gia_ban } = product;
+    const tongTien = So_luong * Gia_ban;
+
+    // Tạo truy vấn cập nhật sản phẩm có số lượng thay đổi
+    const sql = `
+      UPDATE gio_hang 
+      SET So_luong = ?, 
+          Tong_tien = ? 
+      WHERE Phone = ? AND Ma_SP = ?;
+    `;
+    const values = [So_luong, tongTien, phone, Ma_SP];
+
+    return db.query(sql, values);
+  });
+
+  try {
+    // Chờ tất cả các truy vấn cập nhật hoàn thành
+    await Promise.all(updatePromises);
+
+    // Gửi phản hồi thành công về client
+    res.status(200).json({ message: 'Cart updated successfully' });
+  } catch (error) {
+    console.error('Error updating cart:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Api xóa sản phẩm từ giỏ hàng dựa vào Phone và Ma_SP
+app.delete('/deleteproduct/:phone/:maSP', async (req, res) => {
+  const phone = req.params.phone;
+  const maSP = req.params.maSP;
+
+  try {
+    // Thực hiện truy vấn xóa sản phẩm từ giỏ hàng
+    const deleteQuery = 'DELETE FROM gio_hang WHERE Phone = ? AND Ma_SP = ?';
+    await db.query(deleteQuery, [phone, maSP]);
+
+    // Gửi phản hồi về client
+    res.status(200).json({ message: 'Product deleted successfully from cart' });
+  } catch (error) {
+    console.error('Error deleting product from cart:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
