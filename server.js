@@ -15,7 +15,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore',
+  database: 'pressurestore2',
   port: 3307,
 });
 
@@ -390,7 +390,7 @@ app.delete('/deleteproducts/:id', async (req, res) => {
 // Lấy toàn bộ danh sách trong bảng gio_hang dựa vào sđt user
 app.get('/getcart/:phone', async (req, res) => {
   const Phone = req.params.phone;
-  const sql = 'SELECT san_pham.Hinh_anh, san_pham.Ma_SP, san_pham.Gia_ban, gio_hang.So_luong, gio_hang.Tong_tien, User.Phone FROM user JOIN gio_hang ON user.Phone = gio_hang.Phone JOIN san_pham ON gio_hang.Ma_SP = san_pham.Ma_SP WHERE User.Phone = ?'
+  const sql = 'SELECT san_pham.Hinh_anh, gio_hang.Ma_GH , san_pham.Ma_SP, san_pham.Gia_ban, gio_hang.So_luong, gio_hang.Tong_tien, User.Phone FROM user JOIN gio_hang ON user.Phone = gio_hang.Phone JOIN san_pham ON gio_hang.Ma_SP = san_pham.Ma_SP WHERE User.Phone = ?'
   console.log('Executing SQL query:', sql);
   console.log('Executing Phone:', Phone);
   db.query(sql, Phone, (err, data) => {
@@ -498,6 +498,41 @@ app.delete('/deleteproduct/:phone/:maSP', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+// Thêm giá trị thanh toán vào database thanh_toan
+app.post('/addpayment', async (req, res) => {
+  const {
+    Ma_GH,
+    Phone,
+    Phuong_thuc_TT,
+    Ma_SP,
+    Gia_SP,
+    So_luong,
+    Hinh_anh,
+    Email,
+  } = req.body;
+
+  try {
+    const sql = 'INSERT INTO thanh_toan (Ma_GH, Phone, Phuong_thuc_TT, Ma_SP, Gia_SP, So_luong, Hinh_anh, Email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    
+    const values = [
+      Ma_GH,
+      Phone,
+      Phuong_thuc_TT,
+      Ma_SP,
+      Gia_SP,
+      So_luong,
+      Hinh_anh,
+      Email,
+    ];
+
+    await db.query(sql, values);
+    res.status(200).json({ message: 'Product add to payment succesful!' });
+  } catch (error) {
+    console.error('Error add payment:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+})
 
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
