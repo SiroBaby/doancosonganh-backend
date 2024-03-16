@@ -3,6 +3,7 @@ const mysql = require('mysql');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const moment = require('moment-timezone');
 
 
 const app = express();
@@ -207,10 +208,7 @@ app.get('/getuser/:id', (req, res) => {
       return;
     }
 
-    if (result.length === 0) {
-      res.status(404).json({ error: 'Product not found' });
-      return;
-    }
+
 
     res.status(200).json(result[0]); // Trả về thông tin sản phẩm cụ thể
   });
@@ -514,7 +512,7 @@ app.post('/addpayment', async (req, res) => {
 
   try {
     const sql = 'INSERT INTO thanh_toan (Ma_GH, Phone, Phuong_thuc_TT, Ma_SP, Gia_SP, So_luong, Hinh_anh, Email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
-    
+
     const values = [
       Ma_GH,
       Phone,
@@ -533,6 +531,88 @@ app.post('/addpayment', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 })
+
+// Thêm vào don_dat_hang
+app.post('/addorder', async (req, res) => {
+  const {
+    Ma_GH,
+    UserName,
+    Phone,
+    Diachi,
+    Phuong_thuc_TT,
+    Email,
+  } = req.body;
+
+
+
+  try {
+    const vietnamTime = moment().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
+    const sql = "INSERT INTO don_dat_hang (Ma_GH, Ngay_lap, Username, Phone, Dia_chi, Phuong_thuc_TT, Email) VALUES (?, ?, ?, ?, ?, ?, ?)"
+
+    const values = [
+      Ma_GH,
+      vietnamTime,
+      UserName,
+      Phone,
+      Diachi,
+      Phuong_thuc_TT,
+      Email,
+    ];
+
+    await db.query(sql, values);
+    console.log('ket qua', req.body, vietnamTime);
+    res.status(200).json({ message: 'Product add to payment succesful!' });
+  } catch (error) {
+    console.error('Error add payment:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+})
+
+// Endpoint cập nhật số lượng sản phẩm
+app.put('/updatequantity/:maSP', async (req, res) => {
+  const maSP = req.params.maSP;
+  const {
+    So_luong,
+    Luot_ban,
+  } = req.body; // Kiểm tra xem newQuantity có tồn tại không
+  console.log('Số Lượng Mới:', req.body); // Đăng nhập newQuantity để kiểm tra giá trị của nó
+  try {
+    // Thực hiện truy vấn cập nhật số lượng sản phẩm
+    const sql = 'UPDATE san_pham SET So_luong = ?, Luot_ban = Luot_ban + ? WHERE Ma_SP = ?';
+    const values = [So_luong, Luot_ban, maSP];
+    await db.query(sql, values);
+    console.log('Cập nhật lại: ', So_luong, maSP);
+
+    // Phản hồi cho client
+    res.status(200).json({ message: 'Quantity updated successfully' });
+  } catch (error) {
+    console.error('Error updating quantity:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// lấy thông tin order
+app.get('/getorder/:phone', (req, res) => {
+  const phone = req.params.phone;
+  sql = 'SELECT * FROM don_dat_hang JOIN gio_hang ON don_dat_hang.Ma_GH = gio_hang.Ma_GH JOIN san_pham ON san_pham.Ma_SP = gio_hang.Ma_SP WHERE don_dat_hang.Phone = ?;'
+  console.log('Executing SQL query:', sql);
+  console.log('Executing Phone:', phone);
+  db.query(sql, phone, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error '});
+      return;
+    }
+    if (data.length === 0) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    res.status(200).json(data); 
+  })
+})
+
+
 
 // Bổ sung middleware xử lý lỗi không nằm trong route
 app.use((err, req, res, next) => {
