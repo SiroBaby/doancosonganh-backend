@@ -497,31 +497,58 @@ app.delete('/deleteproduct/:phone/:maSP', async (req, res) => {
   }
 });
 
+// Lấy giá trị từ bảng thanh_toan
+app.get('/getpayment/:phone', async (req, res) => {
+  const Phone = req.params.phone;
+  const sql = 'SELECT * FROM thanh_toan WHERE Phone = ?'
+  console.log('Executing SQL query:', sql);
+  console.log('Executing Phone:', Phone);
+  db.query(sql, Phone, (err, data) => {
+    if (err) {
+      console.error('Error excuting query:' + err.stack);
+      res.status(500).json({error: 'Internal Server Error'});
+      return;
+    }
+    if (data.length === 0) {
+      res.status(404).json({error: 'Product not found'});
+      return;
+    }
+    res.status(200).json(data);
+  })
+})
+
 // Thêm giá trị thanh toán vào database thanh_toan
 app.post('/addpayment', async (req, res) => {
   const {
-    Ma_GH,
+    UserName,
     Phone,
+    Diachi,
     Phuong_thuc_TT,
     Ma_SP,
     Gia_SP,
     So_luong,
     Hinh_anh,
     Email,
+    Ma_van_don,
   } = req.body;
+  console.log(req.body);
 
   try {
-    const sql = 'INSERT INTO thanh_toan (Ma_GH, Phone, Phuong_thuc_TT, Ma_SP, Gia_SP, So_luong, Hinh_anh, Email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+    const vietnamTime = moment().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
+    const sql = 'INSERT INTO don_dat_hang_tt (Ma_van_don, Ngay_lap, Username, Phone, Dia_chi, Phuong_thuc_TT, Email, Ma_SP, Gia_SP, So_luong, Hinh_anh) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
     const values = [
-      Ma_GH,
+      Ma_van_don,
+      vietnamTime,
+      UserName,
       Phone,
+      Diachi,
       Phuong_thuc_TT,
+      Email,
       Ma_SP,
       Gia_SP,
       So_luong,
       Hinh_anh,
-      Email,
     ];
 
     await db.query(sql, values);
@@ -533,40 +560,40 @@ app.post('/addpayment', async (req, res) => {
 })
 
 // Thêm vào don_dat_hang
-app.post('/addorder', async (req, res) => {
-  const {
-    Ma_GH,
-    UserName,
-    Phone,
-    Diachi,
-    Phuong_thuc_TT,
-    Email,
-  } = req.body;
+// app.post('/addorder', async (req, res) => {
+//   const {
+//     Ma_TT,
+//     UserName,
+//     Phone,
+//     Diachi,
+//     Phuong_thuc_TT,
+//     Email,
+//   } = req.body;
 
+//   console.log('Ket qua: ', req.body)
 
+//   try {
+//     const vietnamTime = moment().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
+//     const sql = "INSERT INTO don_dat_hang (Ngay_lap, Ma_TT, Username, Phone, Dia_chi, Phuong_thuc_TT, Email) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
-  try {
-    const vietnamTime = moment().tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD HH:mm:ss');
-    const sql = "INSERT INTO don_dat_hang (Ma_GH, Ngay_lap, Username, Phone, Dia_chi, Phuong_thuc_TT, Email) VALUES (?, ?, ?, ?, ?, ?, ?)"
+//     const values = [
+//       vietnamTime,
+//       Ma_TT,
+//       UserName,
+//       Phone,
+//       Diachi,
+//       Phuong_thuc_TT,
+//       Email,
+//     ];
 
-    const values = [
-      Ma_GH,
-      vietnamTime,
-      UserName,
-      Phone,
-      Diachi,
-      Phuong_thuc_TT,
-      Email,
-    ];
-
-    await db.query(sql, values);
-    console.log('ket qua', req.body, vietnamTime);
-    res.status(200).json({ message: 'Product add to payment succesful!' });
-  } catch (error) {
-    console.error('Error add payment:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-})
+//     await db.query(sql, values);
+//     console.log('ket qua', req.body, vietnamTime);
+//     res.status(200).json({ message: 'Product add to payment succesful!' });
+//   } catch (error) {
+//     console.error('Error add payment:', error);
+//     res.status(500).json({ error: 'Internal Server Error' });
+//   }
+// })
 
 // Endpoint cập nhật số lượng sản phẩm
 app.put('/updatequantity/:maSP', async (req, res) => {
@@ -594,10 +621,60 @@ app.put('/updatequantity/:maSP', async (req, res) => {
 // lấy thông tin order
 app.get('/getorder/:phone', (req, res) => {
   const phone = req.params.phone;
-  sql = 'SELECT * FROM don_dat_hang JOIN gio_hang ON don_dat_hang.Ma_GH = gio_hang.Ma_GH JOIN san_pham ON san_pham.Ma_SP = gio_hang.Ma_SP WHERE don_dat_hang.Phone = ?;'
+  sql = 'SELECT Ma_DH, Hinh_anh, Ma_van_don, Ngay_lap, Tinh_trang, SUM(Gia_SP) AS Tong_thanh_toan FROM don_dat_hang_tt WHERE Phone = 0772491796 GROUP BY Ma_van_don  ORDER BY Ma_DH DESC'
   console.log('Executing SQL query:', sql);
   console.log('Executing Phone:', phone);
   db.query(sql, phone, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error '});
+      return;
+    }
+    if (data.length === 0) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    res.status(200).json(data); 
+  })
+})
+
+app.get('/getorderdetail/:phone/:mavandon', (req, res) => {
+  const ma_van_don = req.params.mavandon;
+  const phone = req.params.phone;
+  sql = 'SELECT Ma_SP, So_luong, Gia_SP, Hinh_anh FROM don_dat_hang_tt WHERE Ma_van_don = ? AND Phone = ?;'
+  const value = [
+    ma_van_don,
+    phone,
+  ]
+  console.log('Executing SQL query:', sql);
+  console.log('Executing Phone:', phone);
+  db.query(sql, value, (err, data) => {
+    if (err) {
+      console.error('Error executing query: ' + err.stack);
+      res.status(500).json({ error: 'Internal Server Error '});
+      return;
+    }
+    if (data.length === 0) {
+      res.status(404).json({ error: 'Product not found' });
+      return;
+    }
+
+    res.status(200).json(data); 
+  })
+})
+
+app.get('/getorderinfo/:phone/:ma_van_don', (req, res) => {
+  const phone = req.params.phone;
+  const ma_van_don = req.params.ma_van_don;
+  sql = 'SELECT Username, Email, Ngay_lap, Tinh_trang, Phone, Ma_DH, Dia_chi, Ma_van_don FROM don_dat_hang_tt WHERE Ma_van_don = ? AND Phone =? GROUP BY Ma_van_don;'
+  const value = [
+    ma_van_don,
+    phone,
+  ]
+  console.log('Executing SQL query:', sql);
+  console.log('Executing Phone:', phone);
+  db.query(sql, value, (err, data) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
       res.status(500).json({ error: 'Internal Server Error '});
