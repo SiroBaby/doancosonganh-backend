@@ -252,8 +252,43 @@ app.put('/edituser/:id', async (req, res) => {
 
 // Api xóa người dùng
 app.delete('/deleteuser/:id', async (req, res) => {
-  const userId = req.params.id; // Sửa thành req.params.id
-  const sql = `DELETE FROM User WHERE Phone = ?`
+  const userId = req.params.id;
+
+  // 1. Xác định các bản ghi tham chiếu đến người dùng
+  const sqlSelect = `SELECT * FROM gio_hang WHERE Phone = ?`;
+  db.query(sqlSelect, userId, (selectErr, selectData) => {
+    if (selectErr) {
+      console.error('Error selecting referencing records: ' + selectErr.stack);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+
+    // 2. Kiểm tra nếu có bản ghi tham chiếu
+    if (selectData.length > 0) {
+      // Có các bản ghi tham chiếu, bạn có thể xóa chúng hoặc cập nhật để loại bỏ tham chiếu
+
+      // Ví dụ: xóa các bản ghi tham chiếu
+      const sqlDelete = `DELETE FROM gio_hang WHERE Phone = ?`;
+      db.query(sqlDelete, userId, (deleteErr, deleteData) => {
+        if (deleteErr) {
+          console.error('Error deleting referencing records: ' + deleteErr.stack);
+          res.status(500).json({ error: 'Internal Server Error' });
+          return;
+        }
+
+        // 3. Xóa người dùng sau khi không còn bản ghi tham chiếu
+        deleteUser(userId, res);
+      });
+    } else {
+      // Không có bản ghi tham chiếu, có thể xóa người dùng trực tiếp
+      deleteUser(userId, res);
+    }
+  });
+});
+
+// Hàm xóa người dùng
+function deleteUser(userId, res) {
+  const sql = `DELETE FROM User WHERE Phone = ?`;
   console.log('Executing SQL query:', sql);
   db.query(sql, userId, (err, data) => {
     if (err) {
@@ -261,9 +296,9 @@ app.delete('/deleteuser/:id', async (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
-    res.status(200).json({ message: 'Delete user successfully' }); // Sửa thành 'Delete product successfully'
+    res.status(200).json({ message: 'Delete user successfully' });
   });
-})
+}
 
 //api update sản phẩm
 app.post('/updateproduct/:id', async (req, res) => {
