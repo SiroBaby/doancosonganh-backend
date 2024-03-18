@@ -186,6 +186,17 @@ app.get('/getproducts', (req, res) => {
   });
 });
 
+// api search sản phẩm
+app.get('/getproducts/:id', (req, res) => {
+  const id = req.params.id;
+  const sql = 'SELECT * FROM san_pham WHERE Trong_luong = ?'
+  db.query(sql, id, (err, result) => {
+    console.log('ID: ', id)
+    if (err) return res.json(err);
+    return res.json(result);
+  });
+});
+
 //api lấy danh sách toàn bộ người dùng
 app.get('/getuser', (req, res) => {
   const sql = 'SELECT * FROM User';
