@@ -16,8 +16,8 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore',
-  port: 3306,
+  database: 'pressurestore2',
+  port: 3307,
 });
 
 //kết nối với mysql
@@ -727,22 +727,25 @@ app.use((err, req, res, next) => {
 
 
 // Route for adding a new member
-app.post('/addmember', (req, res) => {
+app.post('/addmember', async (req, res) => {
   const { Username, Password, ConfirmPassword, Email, Phone } = req.body;
-  const sql = "INSERT INTO user (`Username`, `Password`, `Email`, `Phone `) VALUES (?, ?, ?, ?)";
+  const sql = "INSERT INTO user (`Phone`, `Username`, `Password`, `Email`) VALUES (?, ?, ?, ?)";
   const values = [
-    Username, Password, Email, Phone
+    Phone, Username, Password, Email
   ];
   // Check if Password matches ConfirmPassword
   if (Password !== ConfirmPassword) {
     return res.status(400).json({ status: 'error', message: 'Password does not match ConfirmPassword' });
   }
 
-  // Add new member to the database (mock implementation)
-  const newMember = { Username, Password, Email, Phone };
-  members.push(newMember);
-
-  return res.status(200).json({ status: 'success', message: 'Member added successfully' });
+  try {
+    await db.query(sql, values)
+    res.status(200).json({ Message: "Tạo tài khoản thành công!" })
+  }
+  catch (error) {
+    console.error("Có lỗi khi tạo tài khoản: ", error)
+    res.status(500).json({ Message: "Tạo tài khoản thất bại!" })
+  }
 });
 
 
