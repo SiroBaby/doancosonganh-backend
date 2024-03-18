@@ -16,7 +16,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore2',
+  database: 'pressurestore3',
   port: 3307,
 });
 
@@ -68,8 +68,9 @@ app.post('/adding', (req, res) => {
     Do_tinh_khiet,
     Hinh_anh,
     Ma_loai,
+    Luot_ban,
   } = req.body;
-  const sql = "INSERT INTO san_pham (`Ma_SP`, `Gia_BD`, `Phan_tram_giam`, `Gia_ban`, `So_luong`, `Trong_luong`, `Kich_thuoc`, `Hinh_dang`, `Mau_sac`, `Do_tinh_khiet`, `Hinh_anh`, `Ma_loai`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  const sql = "INSERT INTO san_pham (`Ma_SP`, `Gia_BD`, `Phan_tram_giam`, `Gia_ban`, `So_luong`, `Trong_luong`, `Kich_thuoc`, `Hinh_dang`, `Mau_sac`, `Do_tinh_khiet`, `Hinh_anh`, `Ma_loai`, Luot_ban) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   const values = [
     Ma_SP,
@@ -84,6 +85,7 @@ app.post('/adding', (req, res) => {
     Do_tinh_khiet,
     Hinh_anh,
     Ma_loai,
+    Luot_ban,
   ];
   console.log('Executing SQL query:', sql);
   console.log('Query values:', values);
@@ -218,9 +220,6 @@ app.get('/getuser/:id', (req, res) => {
       res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
-
-
-
     res.status(200).json(result[0]); // Trả về thông tin sản phẩm cụ thể
   });
 })
@@ -348,45 +347,77 @@ app.post('/updatepicture/:id', async (req, res) => {
   });
 })
 
-// Api xóa sản phẩm
 app.delete('/deleteproducts/:id', async (req, res) => {
   const productId = req.params.id;
 
   // Kiểm tra xem có dữ liệu trong bảng gio_hang tham chiếu đến sản phẩm không
-  const checkQuery = 'SELECT COUNT(*) AS count FROM gio_hang WHERE Ma_SP = ?';
-  db.query(checkQuery, productId, (checkErr, checkResult) => {
+  const checkCartQuery = 'SELECT COUNT(*) AS count FROM gio_hang WHERE Ma_SP = ?';
+  db.query(checkCartQuery, productId, (checkErr, checkCartResult) => {
     if (checkErr) {
-      console.error('Error checking related data: ' + checkErr.stack);
+      console.error('Error checking related data (gio_hang): ' + checkErr.stack);
       res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
 
-    const rowCount = checkResult[0].count;
+    const cartRowCount = checkCartResult[0].count;
 
     // Nếu có dữ liệu liên quan trong bảng gio_hang, thực hiện xóa trước
-    if (rowCount > 0) {
-      const deleteQuery = 'DELETE FROM gio_hang WHERE Ma_SP = ?';
-      db.query(deleteQuery, productId, (deleteErr, deleteResult) => {
-        if (deleteErr) {
-          console.error('Error deleting related data: ' + deleteErr.stack);
+    if (cartRowCount > 0) {
+      const deleteCartQuery = 'DELETE FROM gio_hang WHERE Ma_SP = ?';
+      db.query(deleteCartQuery, productId, (deleteCartErr, deleteCartResult) => {
+        if (deleteCartErr) {
+          console.error('Error deleting related data (gio_hang): ' + deleteCartErr.stack);
           res.status(500).json({ error: 'Internal Server Error' });
           return;
         }
 
-        // Sau khi xóa dữ liệu trong gio_hang, thực hiện xóa sản phẩm
-        executeDeleteProductQuery();
+        // Sau khi xóa dữ liệu trong gio_hang, thực hiện kiểm tra và xóa dữ liệu trong don_dat_hang_tt
+        deleteOrders();
       });
     } else {
-      // Nếu không có dữ liệu liên quan trong gio_hang, thực hiện xóa sản phẩm trực tiếp
-      executeDeleteProductQuery();
+      // Nếu không có dữ liệu liên quan trong gio_hang, thực hiện luôn việc kiểm tra và xóa dữ liệu trong don_dat_hang_tt
+      deleteOrders();
     }
   });
 
-  function executeDeleteProductQuery() {
+  function deleteOrders() {
+    // Kiểm tra xem có dữ liệu trong bảng don_dat_hang_tt tham chiếu đến sản phẩm không
+    const checkOrderQuery = 'SELECT COUNT(*) AS count FROM don_dat_hang_tt WHERE Ma_SP = ?';
+    db.query(checkOrderQuery, productId, (checkOrderErr, checkOrderResult) => {
+      if (checkOrderErr) {
+        console.error('Error checking related data (don_dat_hang_tt): ' + checkOrderErr.stack);
+        res.status(500).json({ error: 'Internal Server Error' });
+        return;
+      }
+
+      const orderRowCount = checkOrderResult[0].count;
+
+      // Nếu có dữ liệu liên quan trong bảng don_dat_hang_tt, thực hiện xóa trước
+      if (orderRowCount > 0) {
+        const deleteOrderQuery = 'DELETE FROM don_dat_hang_tt WHERE Ma_SP = ?';
+        db.query(deleteOrderQuery, productId, (deleteOrderErr, deleteOrderResult) => {
+          if (deleteOrderErr) {
+            console.error('Error deleting related data (don_dat_hang_tt): ' + deleteOrderErr.stack);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+          }
+
+          // Sau khi xóa dữ liệu trong don_dat_hang_tt, thực hiện xóa sản phẩm
+          deleteProduct();
+        });
+      } else {
+        // Nếu không có dữ liệu liên quan trong don_dat_hang_tt, thực hiện luôn việc xóa sản phẩm
+        deleteProduct();
+      }
+    });
+  }
+
+  function deleteProduct() {
+    // Xóa sản phẩm từ bảng san_pham
     const deleteProductQuery = 'DELETE FROM san_pham WHERE Ma_SP = ?';
     db.query(deleteProductQuery, productId, (err, data) => {
       if (err) {
-        console.error('Error executing query: ' + err.stack);
+        console.error('Error deleting product: ' + err.stack);
         res.status(500).json({ error: 'Internal Server Error' });
         return;
       }
@@ -394,6 +425,7 @@ app.delete('/deleteproducts/:id', async (req, res) => {
     });
   }
 });
+
 
 
 // Lấy toàn bộ danh sách trong bảng gio_hang dựa vào sđt user
