@@ -766,10 +766,6 @@ app.post('/addmember', async (req, res) => {
     Phone, Username, Password, Email
   ];
   // Check if Password matches ConfirmPassword
-  if (Password !== ConfirmPassword) {
-    return res.status(400).json({ status: 'error', message: 'Password does not match ConfirmPassword' });
-  }
-
   try {
     await db.query(sql, values)
     res.status(200).json({ Message: "Tạo tài khoản thành công!" })
@@ -778,6 +774,33 @@ app.post('/addmember', async (req, res) => {
     console.error("Có lỗi khi tạo tài khoản: ", error)
     res.status(500).json({ Message: "Tạo tài khoản thất bại!" })
   }
+});
+
+// Api kiểm tra tồn tại người dùng
+app.post('/checkuser', (req, res) => {
+  const { Phone, Email } = req.body;
+
+  const checkPhoneQuery = 'SELECT * FROM User WHERE Phone = ?';
+  db.query(checkPhoneQuery, Phone, (phoneErr, phoneResult) => {
+    if (phoneErr) {
+      console.error('Error checking phone:', phoneErr);
+      res.status(500).json({ error: 'Internal Server Error' });
+      return;
+    }
+    const existsPhone = phoneResult.length > 0;
+
+    const checkEmailQuery = 'SELECT * FROM User WHERE Email = ?';
+    db.query(checkEmailQuery, Email, (emailErr, emailResult) => {
+      if (emailErr) {
+        console.error('Error checking email:', emailErr);
+        res.status(500).json({ error: 'Internal Server Error' });
+        return;
+      }
+      const existsEmail = emailResult.length > 0;
+
+      res.status(200).json({ existsPhone, existsEmail });
+    });
+  });
 });
 
 
