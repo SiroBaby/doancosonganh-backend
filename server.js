@@ -4,6 +4,9 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 
 const app = express();
@@ -802,7 +805,77 @@ app.post('/checkuser', (req, res) => {
     });
   });
 });
+const secretKey = crypto.randomBytes(64).toString('hex');
+//api lấy lại mật khẩu
+app.post('/forgot-password', (req, res) => {
+  const { email } = req.body;
 
+  // Kiểm tra xem email có tồn tại trong cơ sở dữ liệu không
+  db.query('SELECT * FROM User WHERE Email = ?', [email], (error, results) => {
+    if (error) throw error;
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "Email not found" });
+    }
+
+    // Tạo mã xác nhận (JWT token)
+
+    const token = jwt.sign({ email }, secretKey, { expiresIn: 300 });
+
+    // Gửi email chứa liên kết khôi phục mật khẩu
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: '2254810056@vaa.edu.vn',
+        pass: 'Ngocphat15@'
+      }
+    });
+
+    const mailOptions = {
+      from: '2254810056@vaa.edu.vn',
+      to: email,
+      subject: 'Password Reset',
+      text: `Click vào link này để reset lại mật khẩu: http://localhost:3000/reset-password/${token}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Failed to send email" });
+      }
+      console.log('Email sent: ' + info.response);
+      res.status(200).json({ message: "Email sent successfully" });
+    });
+  });
+});
+
+app.post('/reset-password', async (req, res) => {
+  const { password, confirmPassword, token } = req.body;
+
+  try {
+      // Giải mã JWT token để lấy địa chỉ email
+      const decodedToken = jwt.verify(token, secretKey);
+      const email = decodedToken.email;
+
+      // Kiểm tra mật khẩu và mật khẩu xác nhận
+      if (password !== confirmPassword) {
+          return res.status(400).json({ message: "Password and confirm password do not match" });
+      }
+
+      // Cập nhật mật khẩu mới vào cơ sở dữ liệu
+      const updatePasswordQuery = 'UPDATE User SET Password = ? WHERE Email = ?';
+      db.query(updatePasswordQuery, [password, email], (error, results) => {
+          if (error) {
+              console.error('Error updating password:', error);
+              return res.status(500).json({ message: "Internal Server Error" });
+          }
+          res.status(200).json({ message: "Password reset successfully" });
+      });
+  } catch (error) {
+      console.error('Error:', error);
+      res.status(401).json({ message: "Invalid or expired token" });
+  }
+});
 
 //<--------------------------------------Test đổ dữ liệu từ dtb vào----------------------->
 
