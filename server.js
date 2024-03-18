@@ -16,8 +16,8 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-  database: 'pressurestore2',
-  port: 3307,
+  database: 'pressurestore',
+  port: 3306,
 });
 
 //kết nối với mysql
@@ -405,11 +405,11 @@ app.get('/getcart/:phone', async (req, res) => {
   db.query(sql, Phone, (err, data) => {
     if (err) {
       console.error('Error excuting query:' + err.stack);
-      res.status(500).json({error: 'Internal Server Error'});
+      res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
     if (data.length === 0) {
-      res.status(404).json({error: 'Product not found'});
+      res.status(404).json({ error: 'Product not found' });
       return;
     }
     res.status(200).json(data);
@@ -515,11 +515,11 @@ app.get('/getorder', async (req, res) => {
   db.query(sql, (err, data) => {
     if (err) {
       console.error('Error excuting query:' + err.stack);
-      res.status(500).json({error: 'Internal Server Error'});
+      res.status(500).json({ error: 'Internal Server Error' });
       return;
     }
     if (data.length === 0) {
-      res.status(404).json({error: 'Product not found'});
+      res.status(404).json({ error: 'Product not found' });
       return;
     }
     res.status(200).json(data);
@@ -636,7 +636,7 @@ app.get('/getorder/:phone', (req, res) => {
   db.query(sql, phone, (err, data) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
-      res.status(500).json({ error: 'Internal Server Error '});
+      res.status(500).json({ error: 'Internal Server Error ' });
       return;
     }
     if (data.length === 0) {
@@ -644,7 +644,7 @@ app.get('/getorder/:phone', (req, res) => {
       return;
     }
 
-    res.status(200).json(data); 
+    res.status(200).json(data);
   })
 })
 
@@ -661,7 +661,7 @@ app.get('/getorderdetail/:phone/:mavandon', (req, res) => {
   db.query(sql, value, (err, data) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
-      res.status(500).json({ error: 'Internal Server Error '});
+      res.status(500).json({ error: 'Internal Server Error ' });
       return;
     }
     if (data.length === 0) {
@@ -669,7 +669,7 @@ app.get('/getorderdetail/:phone/:mavandon', (req, res) => {
       return;
     }
 
-    res.status(200).json(data); 
+    res.status(200).json(data);
   })
 })
 
@@ -686,7 +686,7 @@ app.get('/getorderinfo/:phone/:ma_van_don', (req, res) => {
   db.query(sql, value, (err, data) => {
     if (err) {
       console.error('Error executing query: ' + err.stack);
-      res.status(500).json({ error: 'Internal Server Error '});
+      res.status(500).json({ error: 'Internal Server Error ' });
       return;
     }
     if (data.length === 0) {
@@ -694,7 +694,7 @@ app.get('/getorderinfo/:phone/:ma_van_don', (req, res) => {
       return;
     }
 
-    res.status(200).json(data); 
+    res.status(200).json(data);
   })
 })
 
@@ -723,6 +723,28 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
 });
+//api thêm thành viên 
+
+
+// Route for adding a new member
+app.post('/addmember', (req, res) => {
+  const { Username, Password, ConfirmPassword, Email, Phone } = req.body;
+  const sql = "INSERT INTO user (`Username`, `Password`, `Email`, `Phone `) VALUES (?, ?, ?, ?)";
+  const values = [
+    Username, Password, Email, Phone
+  ];
+  // Check if Password matches ConfirmPassword
+  if (Password !== ConfirmPassword) {
+    return res.status(400).json({ status: 'error', message: 'Password does not match ConfirmPassword' });
+  }
+
+  // Add new member to the database (mock implementation)
+  const newMember = { Username, Password, Email, Phone };
+  members.push(newMember);
+
+  return res.status(200).json({ status: 'success', message: 'Member added successfully' });
+});
+
 
 //<--------------------------------------Test đổ dữ liệu từ dtb vào----------------------->
 
